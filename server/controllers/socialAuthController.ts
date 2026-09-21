@@ -121,17 +121,18 @@ export const syncAccounts = async(req: AuthRequest, res: Response) : Promise<voi
             }
 
             const rawPlatform = (zAccount.platform || zAccount.type || "").toLowercase();
-            const noralizedPlatform = supportedPlatforms.find((p)=>rawPlatform.includes(p))
+            const normalizedPlatform = supportedPlatforms.find((p)=>rawPlatform.includes(p))
 
-            if(!noralizedPlatform) {
+            if(!normalizedPlatform) {
                 console.log(`Skipping unsupported platform : ${rawPlatform}`);
+                continue;
             }
 
             const account = await Account.findOneAndUpdate(
                 {zernioAccountId: zid},
                 {
                     user: req.user._id,
-                    platform: noralizedPlatform,
+                    platform: normalizedPlatform,
                     handle: zAccount.username || zAccount.name || zAccount.handle || "uncknown",
                     zernioAccountId : zid,
                     status : "connected",
