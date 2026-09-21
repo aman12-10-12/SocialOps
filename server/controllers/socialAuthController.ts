@@ -1,6 +1,8 @@
 import { Request, Response } from "express";
 import zernio from "../config/zernio.js";
 import { User } from "../models/User.js";
+import { Account } from "../models/Accounts.js";
+import { AuthRequest } from "../middlewares/authMiddleware.js";
 
 
 // Helper function to ensure user has a Zernio Profile
@@ -57,7 +59,7 @@ const getOrCreateZernioProfile = async (user: any) : Promise<string> => {
  * @access Private
  * @route GET /api/auth/:platform
  */
-export const generateAuthUrl = async (req: Request, res: Response) : Promise<void> => {
+export const generateAuthUrl = async (req: AuthRequest, res: Response) : Promise<void> => {
     try {
         const {platform} = req.params
         const profileId = await getOrCreateZernioProfile(req.user)
@@ -92,3 +94,60 @@ export const generateAuthUrl = async (req: Request, res: Response) : Promise<voi
     }
 }
 
+/**
+ * @name syncAccounts
+ * @description Sync connected accounts from zernio into MongoDB
+ * @access Private
+ * @route GET /api/auth/sync
+ */
+export const syncAccounts = async(req: AuthRequest, res: Response) : Promise<void> => {
+    try {
+        const profileId = await getOrCreateZernioProfile(req.user)
+        const result = await zernio.accounts.listAccounts({
+            query : {profileId} as any
+        })
+
+        const data = result.data as any;
+        const zernioAccounts: any[] = data?.accounts || (Array.isArray(data) ? data : [])
+        const supportedPlatforms = ["twitter", "linkedin", "facebook", "instagram"]
+        const syncedAccounts = [];
+
+        for(const zAccount of zernioAccounts) {
+            const zid = zAccount._id || zAccount.id
+
+            if(!zid) {
+                console.warn("Skipping account with no ID : ", zAccount);
+                continue;
+            }
+
+            const rawPlatform = (zAccount.platform || zAccount.type || "").toLowercase();
+            const noralizedPlatform = supportedPlatforms.find((p)=>rawPlatform.includes(p))
+
+            if(!noralizedPlatform) {
+                console.log(`Skipping unsupported platform : ${rawPlatform}`);
+            }
+
+            const account = await Account.findOneAndUpdate(
+                {zernioAccountId: zid},
+                {
+                    user: req.user._id,
+                    platform: noralizedPlatform,
+                    handle: zAccount.username || zAccount.name || zAccount.handle || "uncknown",
+                    zernioAccountId : zid,
+                    status : "connected",
+                    avatarUrl: zAccount.avatarUrl || zAccount.picture || zAccount.profile_image_url,
+                },
+                {
+                    upsert: true,
+                    returnDocument: 'after'
+                }
+            )
+            syncedAccounts.push(account)
+        }
+        res.json(syncedAccounts)
+    } catch(error : any) {
+        res.status(500).json({
+            message: error?.message || "server error"
+        })
+    }
+}
