@@ -130,3 +130,38 @@ export const generatePost = async (req: AuthRequest, res: Response): Promise<voi
 }
 
 
+/**
+ * @name getGeneration
+ * @description Get generated content
+ * @access Private
+ * @route GET /api/posts/generations
+ */
+export const getGenerations = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const generations = await Generation.find({ user: req.user?.id })
+            .sort({ createdAt: -1 });
+
+        res.status(200).json(generations);
+    } catch (error : any) {
+        res.status(500).json({ message: error?.message || "Failed to generate post." });
+    }
+}
+
+
+/**
+ * @name getPosts
+ * @description Get posts
+ * @access Private
+ * @route GET /api/posts/
+ */
+export const getPosts = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const posts = await Post.find({user: req.user._id})
+        res.json(posts)
+    } catch (error: any) {
+        res.status(500).json({ message: error?.message || "Server error" });
+    }
+}
+
+
+
