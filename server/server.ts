@@ -6,6 +6,7 @@ import connectDB from "./config/db.js";
 import authRouter from "./routes/authRoutes.js";
 import cookieParser from "cookie-parser";
 import socialAuthRouter from "./routes/socialAuthRoutes.js";
+import accountRouter from "./routes/accountRoutes.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get("/", (_req: Request, res: Response) => {
 
 app.use("/api/auth", authRouter);
 app.use("/api/oauth", socialAuthRouter);
+app.use("/api/accounts", accountRouter)
 
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction)=> {
