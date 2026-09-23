@@ -123,3 +123,22 @@ export const loginUser = async (req: Request, res: Response) : Promise<void> => 
         res.status(500).json({message: error?.message || "Server error"})
     }
 }
+
+/**
+ * @name logoutUser
+ * @description Clears the auth cookie
+ * @access Public
+ * @route Post /api/auth/logout
+ */
+export const logoutUser = async (_req: Request, res: Response): Promise<void> => {
+    try {
+        res.clearCookie("token", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+        });
+        res.status(200).json({ message: "Logged out successfully" });
+    } catch (error: any) {
+        res.status(500).json({ message: error?.message || "Server error" });
+    }
+}

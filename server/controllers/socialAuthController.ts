@@ -120,7 +120,7 @@ export const syncAccounts = async(req: AuthRequest, res: Response) : Promise<voi
                 continue;
             }
 
-            const rawPlatform = (zAccount.platform || zAccount.type || "").toLowercase();
+            const rawPlatform = (zAccount.platform || zAccount.type || "").toLowerCase();
             const normalizedPlatform = supportedPlatforms.find((p)=>rawPlatform.includes(p))
 
             if(!normalizedPlatform) {
@@ -133,7 +133,7 @@ export const syncAccounts = async(req: AuthRequest, res: Response) : Promise<voi
                 {
                     user: req.user._id,
                     platform: normalizedPlatform,
-                    handle: zAccount.username || zAccount.name || zAccount.handle || "uncknown",
+                    handle: zAccount.username || zAccount.name || zAccount.handle || "unknown",
                     zernioAccountId : zid,
                     status : "connected",
                     avatarUrl: zAccount.avatarUrl || zAccount.picture || zAccount.profile_image_url,
