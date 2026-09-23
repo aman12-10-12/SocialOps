@@ -3,6 +3,7 @@ import { User } from "../models/User.js";
 import bcrypt from "bcrypt"
 import "dotenv/config"
 import jwt from "jsonwebtoken"
+import { AuthRequest } from "../middlewares/authMiddleware.js"
 
 const generateToken = (id: string) => {
     return jwt.sign(
@@ -138,6 +139,31 @@ export const logoutUser = async (_req: Request, res: Response): Promise<void> =>
             sameSite: "lax",
         });
         res.status(200).json({ message: "Logged out successfully" });
+    } catch (error: any) {
+        res.status(500).json({ message: error?.message || "Server error" });
+    }
+}
+
+/**
+ * @name getMe
+ * @description Returns the currently authenticated user, verified against the auth cookie
+ * @access Private
+ * @route Get /api/auth/me
+ */
+export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
+    try {
+        const user = await User.findById(req.userId).select("-password");
+
+        if (!user) {
+            res.status(404).json({ message: "User not found" });
+            return;
+        }
+
+        res.json({
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+        });
     } catch (error: any) {
         res.status(500).json({ message: error?.message || "Server error" });
     }
