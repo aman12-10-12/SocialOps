@@ -152,17 +152,15 @@ export const logoutUser = async (_req: Request, res: Response): Promise<void> =>
  */
 export const getMe = async (req: AuthRequest, res: Response): Promise<void> => {
     try {
-        const user = await User.findById(req.userId).select("-password");
-
-        if (!user) {
-            res.status(404).json({ message: "User not found" });
+        if (!req.user) {
+            res.status(401).json({ message: "Not authorized" });
             return;
         }
 
         res.json({
-            _id: user._id,
-            name: user.name,
-            email: user.email,
+            _id: req.user._id,
+            name: req.user.name,
+            email: req.user.email,
         });
     } catch (error: any) {
         res.status(500).json({ message: error?.message || "Server error" });

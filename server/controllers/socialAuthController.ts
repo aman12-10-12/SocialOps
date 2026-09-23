@@ -88,8 +88,10 @@ export const generateAuthUrl = async (req: AuthRequest, res: Response) : Promise
             url : authUrl
         })
     }catch (error: any) {
-        res.status(500).json({
-            message : error?.message || "Server error"
+        console.error("generateAuthUrl error:", error?.response?.data || error);
+        const statusCode = error?.response?.status || 500;
+        res.status(statusCode).json({
+            message : error?.response?.data?.message || error?.message || "Server error"
         })
     }
 }
@@ -147,8 +149,12 @@ export const syncAccounts = async(req: AuthRequest, res: Response) : Promise<voi
         }
         res.json(syncedAccounts)
     } catch(error : any) {
-        res.status(500).json({
-            message: error?.message || "server error"
+        console.error("syncAccounts error:", error?.response?.data || error);
+        const statusCode = Number.isInteger(error?.statusCode)
+            ? error.statusCode
+            : error?.response?.status || 500;
+        res.status(statusCode).json({
+            message: error?.response?.data?.message || error?.message || "server error"
         })
     }
 }

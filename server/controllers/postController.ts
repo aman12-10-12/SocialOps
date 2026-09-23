@@ -184,6 +184,35 @@ export const schedulePost = async (req: AuthRequest, res: Response): Promise<voi
             }
         }
 
+        if(!content || typeof content !== "string" || !content.trim()) {
+            res.status(400).json({ message: "Post content is required." });
+            return;
+        }
+
+        if(!Array.isArray(parsedPlatforms) || parsedPlatforms.length === 0) {
+            res.status(400).json({ message: "At least one platform is required." });
+            return;
+        }
+
+        if(!scheduledFor || Number.isNaN(new Date(scheduledFor).getTime())) {
+            res.status(400).json({ message: "A valid scheduled date and time are required." });
+            return;
+        }
+
+        const allowedPlatforms = [
+            "twitter",
+            "linkedin",
+            "facebook",
+            "instagram",
+            "facebook_page",
+            "linkedin_page",
+            "instagram_business",
+        ];
+        if(parsedPlatforms.some((platform) => !allowedPlatforms.includes(platform))) {
+            res.status(400).json({ message: "One or more selected platforms are invalid." });
+            return;
+        }
+
         let mediaUrl: string | undefined = req.body.mediaUrl;
         let mediaType: "image" | "video" | undefined = req.body.mediaType
 
@@ -219,6 +248,15 @@ export const schedulePost = async (req: AuthRequest, res: Response): Promise<voi
         res.status(201).json(post)
 
     } catch (error: any) {
-        res.status(500).json({ message: error?.message || "Server Error" });
+        console.error("schedulePost error:", error?.response?.data || error);
+        const isCloudinaryError = Number(error?.http_code) === 403;
+        const statusCode = isCloudinaryError
+            ? 502
+            : error?.statusCode || error?.response?.status || 500;
+        res.status(statusCode).json({
+            message: isCloudinaryError
+                ? "Cloudinary authenticated successfully but rejected the media upload."
+                : error?.message || error?.response?.data?.message || "Failed to schedule post.",
+        });
     }
 }
