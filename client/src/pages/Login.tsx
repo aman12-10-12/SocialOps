@@ -1,7 +1,11 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { AxiosError } from "axios";
 import { MailIcon, LockIcon, ArrowRightIcon, EyeIcon, EyeOffIcon, SparklesIcon } from "lucide-react";
 import AuthLayout from "./AuthLayout";
+import api from "../api/axios";
+import { useAuth } from "../context/authContext";
+import toast from "react-hot-toast";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -11,6 +15,7 @@ export default function Login() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const navigate = useNavigate();
+    const { login } = useAuth();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,10 +25,25 @@ export default function Login() {
         }
         setError("");
         setLoading(true);
-        setTimeout(() => {
+        try {
+            const { data } = await api.post("/api/auth/login", { email, password });
+
+            if (!data?._id) {
+                throw new Error("Invalid login response.");
+            }
+
+            login(data);
+            toast.success(`Welcome back, ${data.name}!`);
+            navigate("/dashboard", { replace: true });
+        } catch (err) {
+            const message = err instanceof AxiosError
+                    ? err.response?.data?.message ?? "Something went wrong. Please try again."
+                    : "Something went wrong. Please try again.";
+            setError(message);
+            toast.error(message)
+        } finally {
             setLoading(false);
-            navigate("/dashboard");
-        }, 1000);
+        }
     };
 
     return (
