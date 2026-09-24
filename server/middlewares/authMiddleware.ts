@@ -1,12 +1,13 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 import "dotenv/config";
+import { User } from "../models/User.js";
 
 export interface AuthRequest extends Request {
-    userId?: string;
+    user?: any;
 }
 
-export const protect = (req: AuthRequest, res: Response, next: NextFunction): void => {
+export const protect = async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     const token = req.cookies?.token;
 
     if (!token) {
@@ -20,7 +21,14 @@ export const protect = (req: AuthRequest, res: Response, next: NextFunction): vo
             process.env.JWT_SECRET || "fallback_secret"
         ) as { id: string };
 
-        req.userId = decoded.id;
+        const user = await User.findById(decoded.id).select("-password");
+
+        if (!user) {
+            res.status(401).json({ message: "Not authorized, user not found" });
+            return;
+        }
+
+        req.user = user;
         next();
     } catch {
         res.status(401).json({ message: "Not authorized, token invalid" });

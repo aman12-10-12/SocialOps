@@ -38,10 +38,10 @@ export const generatePost = async (req: AuthRequest, res: Response): Promise<voi
 
         // Generate social Media content
         const textResponse = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash-lite",
 
             contents: `
-                Generate a social media post based on this prompt:
+                Generate a social media post based on this idea:
 
                 "${prompt}"
 
@@ -49,16 +49,22 @@ export const generatePost = async (req: AuthRequest, res: Response): Promise<voi
 
                 Include relevant hashtags.
 
-                Return JSON with exactly these fields:
+                Requirements:
+                - Write only the actual social media post in the "content" field.
+                - Include relevant hashtags at the end of the post.
+                - Do NOT include JSON inside the content field.
+                - Do NOT include labels such as "Content:".
+                - Do NOT include markdown code fences.
+                - Do NOT explain your answer.
+                - Create a separate detailed visual description in "imagePrompt".
+                - The imagePrompt must describe an image that visually represents the post.
+
+                Return exactly this JSON structure:
 
                 {
-                    "content": "The social media post including relevant hashtags",
-                    "imagePrompt": "A highly descriptive prompt for an image generator that visually complements the social media post"
+                "content": "actual social media post with hashtags",
+                "imagePrompt": "detailed image generation prompt"
                 }
-
-                Do not include markdown.
-                Do not include code fences.
-                Return only valid JSON.
             `,
 
             config: {
@@ -70,28 +76,36 @@ export const generatePost = async (req: AuthRequest, res: Response): Promise<voi
         let imagePrompt = prompt;
 
         try {
-            const rawText = textResponse.text || "";
-            const jsonMatch = rawText.match(/\{[\s\s]*\}/)
-            const data = jsonMatch ? JSON.parse(jsonMatch[0]) : {content: rawText, imagePrompt: prompt}
-            content = data.content;
-            imagePrompt = data.imagePrompt
-        } catch (e) {
-            content = textResponse.text || ""
+            const rawText = textResponse.text?.trim() || "";
+
+            const data = JSON.parse(rawText);
+
+            content = data.content?.trim() || "";
+            imagePrompt = data.imagePrompt?.trim() || prompt;
+
+        } catch (error) {
+            console.error("Failed to parse Gemini JSON:", error);
+            console.error("Raw Gemini response:", textResponse.text);
+
+            content = textResponse.text?.trim() || "";
         }
 
         let mediaUrl = ""
         if(generateImage) {
             try {
+                console.log("Generating image...");
+                console.log("Image prompt:", imagePrompt);
                 const imageResponse = await ai.models.generateContent({
                     model: "gemini-3.1-flash-image",
                     contents: imagePrompt,
                     config: {
-                        responseModalities: ["Image"],
+                        responseModalities: ["IMAGE"],
                     },
                 });
 
                 const parts = imageResponse.candidates?.[0]?.content?.parts || [];
-                const imagePart = parts.find((part) => part.inlineData);
+
+                const imagePart = parts.find((part) => part.inlineData?.data);
 
                 if (imagePart?.inlineData?.data) {
                     const mimeType = imagePart.inlineData.mimeType || "image/png";
@@ -104,9 +118,27 @@ export const generatePost = async (req: AuthRequest, res: Response): Promise<voi
                     });
 
                     mediaUrl = uploadResult.secure_url;
-                } 
+                }  else { 
+                    throw new Error("Gemini did not return image data.");
+                }
+    
             } catch (err : any) {
                 console.error("Image generation failed:", err);
+                const isQuotaError = err?.status === 429
+                    || err?.code === 429
+                    || err?.status === "RESOURCE_EXHAUSTED"
+                    || err?.error?.code === 429;
+
+                if (isQuotaError) {
+                    res.set("Retry-After", "15");
+                }
+
+                res.status(isQuotaError ? 429 : 502).json({
+                    message: isQuotaError
+                        ? "Gemini image generation is unavailable for this API key because its image quota is 0. Enable billing or disable AI Image to generate text-only content."
+                        : err?.message || "Image generation failed.",
+                });
+                return;
             }
         }
 
