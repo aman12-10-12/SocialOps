@@ -6,8 +6,8 @@ export default function GuestRoute({ children }: { children: React.ReactNode }) 
 
     if (isLoading) {
         return (
-            <div className='flex h-screen items-center justify-center bg-slate-50'>
-                <div className='size-8 border-4 border-red-500 border-t-transparent rounded-full animate-spin' />
+            <div className='flex h-screen items-center justify-center bg-[#e4edf2]'>
+                <div className='size-8 border-4 border-[#5813e1] border-t-transparent rounded-full animate-spin' />
             </div>
         );
     }

@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import Sidebar from './Sidebar'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { MenuIcon } from 'lucide-react'
+import { useAuth } from '../context/authContext'
 
 const pageTitles : Record<string, string> = {
     "/dashboard" : "Dashboard",
@@ -12,17 +13,30 @@ const pageTitles : Record<string, string> = {
 
 const Layout = () => {
 
+    const {isAuthenticated, isLoading} = useAuth()
+
     const location = useLocation()
     const title = pageTitles[location.pathname] || "SocialAI"
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     
+    if(isLoading) {
+        return (
+            <div className='flex h-screen items-center justify-center bg-[#e4edf2]'>
+                <div className='size-8 border-4 border-[#5813e1] border-t-transparent rounded-full animate-spin'/>
+            </div>
+        )
+    }
+
+    if(!isAuthenticated) {
+        return <Navigate to="/login" replace />
+    }
 
   return (
-    <div className='flex h-screen bg-slate-50'>
+    <div className='flex h-screen bg-[#e4edf2]'>
 
         {/* Mobile Overlay */}
 
-        {isMobileMenuOpen && <div className='fixed inset-0 bg-slate-900/50 z-40 md:hidden'
+        {isMobileMenuOpen && <div className='fixed inset-0 bg-[#011f4b]/50 z-40 md:hidden'
         onClick={()=> setIsMobileMenuOpen(false)}/>}
         
         <Sidebar isOpen={isMobileMenuOpen} setIsOpen={setIsMobileMenuOpen}/>
@@ -31,13 +45,13 @@ const Layout = () => {
 
             {/* Top Bar */}
 
-            <header className='h-16 bg-white border-b border-slate-200 flex items-center px-4 md:px-8 gap-4'>
-                <button className='md:hidden p-2 -ml-2 text-slate-500' onClick={()=> setIsMobileMenuOpen(true)}>
+            <header className='h-16 bg-[#e4edf2] border-b border-[#bbdcf0]/60 flex items-center px-4 md:px-8 gap-4'>
+                <button className='md:hidden p-2 -ml-2 text-[#03396c]' onClick={()=> setIsMobileMenuOpen(true)}>
                     <MenuIcon className='size-6'/>
                 </button>
                 <div>
-                    <h1 className='text-slate-900'>{title}</h1>
-                    <p className='text-sm text-slate-400 hidden sm:block'>Manage and automate your social presence</p>
+                    <h1 className='text-[#011f4b]'>{title}</h1>
+                    <p className='text-sm text-[#6497b1] hidden sm:block'>Manage and automate your social presence</p>
                 </div>
             </header>
 
