@@ -7,6 +7,9 @@ import authRouter from "./routes/authRoutes.js";
 import cookieParser from "cookie-parser";
 import socialAuthRouter from "./routes/socialAuthRoutes.js";
 import accountRouter from "./routes/accountRoutes.js";
+import postRouter from "./routes/postRoutes.js";
+import activityRouter from "./routes/activityRoutes.js";
+import { initScheduler } from "./services/schedulerService.js";
 
 const app = express();
 
@@ -14,7 +17,10 @@ const app = express();
 await connectDB();
 
 // Middleware
-app.use(cors());
+app.use(cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+    credentials: true,
+}));
 app.use(express.json());
 app.use(cookieParser());
 
@@ -27,6 +33,11 @@ app.get("/", (_req: Request, res: Response) => {
 app.use("/api/auth", authRouter);
 app.use("/api/oauth", socialAuthRouter);
 app.use("/api/accounts", accountRouter)
+app.use("/api/posts", postRouter)
+app.use("/api/activity", activityRouter)
+
+// Intialize Scheduler
+initScheduler()
 
 // Global Error Handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction)=> {
